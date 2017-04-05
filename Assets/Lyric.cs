@@ -7,6 +7,12 @@ public class LyricItem : IComparable<LyricItem>
 {
     public string mText = "";
     public Int64 mTimeStamp = 0;
+    public LyricItem() { }
+    public LyricItem(string text, Int64 timestamp)
+    {
+        mText = text;
+        mTimeStamp = timestamp;
+    }
     public int CompareTo(LyricItem other)
     {
         if (mTimeStamp == other.mTimeStamp)
@@ -20,6 +26,8 @@ public class LyricItem : IComparable<LyricItem>
 }
 
 public class Lyric  {
+    // https://en.wikipedia.org/wiki/LRC_(file_format)
+
     // [ti : value]
     // title of music
     public string mTitle = "";
@@ -74,6 +82,8 @@ public class Lyric  {
             ParseLine(line);
         }
 
+        mItems.Sort();
+
         LyricLog("Load lyric end");
         return true;
     }
@@ -90,6 +100,7 @@ public class Lyric  {
 
         int openBracketIndex = 0, closedBracketIndex = 0;
         int startSearchIndex = 0;
+        List<Int64> timestampList = new List<Int64>();
         while (true)
         {
             if (startSearchIndex >= line.Length)
@@ -114,10 +125,28 @@ public class Lyric  {
 
             if (!TryParseIDTag(tagString, tagSplitArray))
             {
-                TryParseTimeTag(tagString, tagSplitArray);
+                Int64 timestamp = 0;
+                if (TryParseTimeTag(tagString, tagSplitArray, out timestamp))
+                {
+                    timestampList.Add(timestamp);
+                }
             }
 
             startSearchIndex = closedBracketIndex + 1;
+        }
+
+        if (timestampList.Count > 0)
+        {
+            string text = "";
+            if (startSearchIndex < line.Length)
+            {
+                text = line.Substring(startSearchIndex);
+            }
+            LyricLogDebug("lyric text: " + text);
+            foreach (Int64 timestamp in timestampList)
+            {
+                mItems.Add(new LyricItem(text, timestamp));
+            }
         }
 
         return true;
@@ -161,8 +190,9 @@ public class Lyric  {
         return true;
     }
 
-    protected bool TryParseTimeTag(string tagString, string[] tagSplitArray)
+    protected bool TryParseTimeTag(string tagString, string[] tagSplitArray, out Int64 timestamp)
     {
+        timestamp = 0;
         if (null == tagSplitArray || tagSplitArray.Length < 2)
             return false;
 
@@ -171,23 +201,38 @@ public class Lyric  {
 
         char[] separator = { ':', '.' };
         string[] timeSplitArray = tagString.Split(separator);
-        if (null == timeSplitArray || timeSplitArray.Length < 2)
+        if (null == timeSplitArray || (timeSplitArray.Length != 2 && timeSplitArray.Length != 3))
             return false;
 
-        if (timeSplitArray.Length == 2)
+        // timeSplitArray.Length == 2, [minute : second]
+        // timeSplitArray.Length == 3, [minute : second : xx] or [minute : second . xx]
+        // xx is hundredths of a second
+
+        Int64 minute = 0, second = 0, millisecond = 0;
+        if (!Int64.TryParse(timeSplitArray[0], out minute))
+            return false;
+
+        if (!Int64.TryParse(timeSplitArray[1], out second))
+            return false;
+
+        if (timeSplitArray.Length == 3)
         {
-            // [minute : second]
+            if (!Int64.TryParse(timeSplitArray[2], out millisecond))
+                return false;
+
+            if (timeSplitArray[2].Length < 3)
+            {
+                millisecond = millisecond * 10;
+            }
         }
-        else if (timeSplitArray.Length == 3)
+
+        if (minute < 0 || second < 0 || millisecond < 0)
         {
-            // [minute : second : millisecond] or [minute : second . millisecond]
-        }
-        else
-        {
-            // not valid now
+            LyricLogError("tagString (" + tagString + ") TryParseTimeTag invalid, minute: " + minute + " second: " + second + " millisecond: " + millisecond);
             return false;
         }
 
+        timestamp = minute * 60 * 1000 + second * 1000 + millisecond;
         return true;
     }
 
