@@ -355,7 +355,7 @@ public class Lyric  {
 
     protected static void LyricLogDebug(string msg)
     {
-        Debug.Log("[Lyric] " + msg);
+        //Debug.Log("[Lyric] " + msg);
     }
 
     protected static void LyricLogError(string msg)
