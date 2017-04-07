@@ -28,10 +28,12 @@ public class LyricItem : IComparable<LyricItem>
 }
 
 public class Lyric  {
-    // https://en.wikipedia.org/wiki/LRC_(file_format)
-
+    // https://en.wikipedia.org/wiki/LRC_(file_format);
+    
+    // those ID Tags are opitional
+    
     // [ti : value]
-    // title of music
+    // Lyrics (song) title
     public string mTitle = "";
 
     // [ar : value]
@@ -39,26 +41,38 @@ public class Lyric  {
     public string mArtist = "";
 
     // [al : value]
-    // name of album
+    // Album where the song is from
     public string mAlbum = "";
+
+    // [au : value]
+    // Creator of the Songtext
+    public string mAuthor = "";
 
     // [by : value]
     // name of lyric file creator
     public string mBy = "";
 
     // [offset : value]
+    // offset of all lyric timestamp
     // integer in millisecond
     public Int64 mOffset = 0;
+
+    // [length : value]
+    // How long the song is
+    public string mLength = "";
 
     // lyric data
     protected List<LyricItem> mItems = new List<LyricItem>();
 
-    protected static string STRING_ID_TAG_TITLE = "ti";
-    protected static string STRING_ID_TAG_ARTIST = "ar";
-    protected static string STRING_ID_TAG_ALBUM = "al";
-    protected static string STRING_ID_TAG_BY = "by";
-    protected static string STRING_ID_TAG_OFFSET = "offset";
+    protected const string STRING_ID_TAG_TITLE = "ti";
+    protected const string STRING_ID_TAG_ARTIST = "ar";
+    protected const string STRING_ID_TAG_ALBUM = "al";
+    protected const string STRING_ID_TAG_AUTHOR = "au";
+    protected const string STRING_ID_TAG_BY = "by";
+    protected const string STRING_ID_TAG_OFFSET = "offset";
+    protected const string STRING_ID_TAG_LENGTH = "length";
 
+    // now the lrc file is need UTF-8 encode
     public bool Load(string path)
     {
         mItems.Clear();
@@ -85,8 +99,7 @@ public class Lyric  {
             ParseLine(line);
         }
 
-        mItems.Sort();
-        UpdateNextTimeStamp();
+        UpdateTimeStamp();
 
         LyricLog("Load lyric end");
 
@@ -107,9 +120,22 @@ public class Lyric  {
         return item;
     }
 
-    List<LyricItem> GetItems()
+    public List<LyricItem> GetItems()
     {
         return mItems;
+    }
+
+    public static string WrapStringWithColorTag(string str, int R, int G, int B)
+    {
+        if (null == str)
+            return "";
+
+        R = Math.Max(Math.Min(R, 255), 0);
+        G = Math.Max(Math.Min(G, 255), 0);
+        B = Math.Max(Math.Min(B, 255), 0);
+
+        object[] param = { R, G, B, str };
+        return string.Format("<color=#{0:X2}{1:X2}{2:X2}>{3}</color>", param);
     }
 
     protected bool ParseLine(string line)
@@ -181,29 +207,39 @@ public class Lyric  {
         if (null == tagSplitArray || tagSplitArray.Length < 2)
             return false;
 
-        if (tagSplitArray[0].Equals(STRING_ID_TAG_TITLE, StringComparison.CurrentCultureIgnoreCase))
+        // is need trim ?
+        string tagName = tagSplitArray[0].Trim();
+        if (tagName.Equals(STRING_ID_TAG_TITLE, StringComparison.CurrentCultureIgnoreCase))
         {
             mTitle = tagSplitArray[1];
         }
-        else if (tagSplitArray[0].Equals(STRING_ID_TAG_ARTIST, StringComparison.CurrentCultureIgnoreCase))
+        else if (tagName.Equals(STRING_ID_TAG_ARTIST, StringComparison.CurrentCultureIgnoreCase))
         {
             mArtist = tagSplitArray[1];
         }
-        else if (tagSplitArray[0].Equals(STRING_ID_TAG_ALBUM, StringComparison.CurrentCultureIgnoreCase))
+        else if (tagName.Equals(STRING_ID_TAG_ALBUM, StringComparison.CurrentCultureIgnoreCase))
         {
             mAlbum = tagSplitArray[1];
         }
-        else if (tagSplitArray[0].Equals(STRING_ID_TAG_BY, StringComparison.CurrentCultureIgnoreCase))
+        else if (tagName.Equals(STRING_ID_TAG_AUTHOR, StringComparison.CurrentCultureIgnoreCase))
+        {
+            mAuthor = tagSplitArray[1];
+        }
+        else if (tagName.Equals(STRING_ID_TAG_BY, StringComparison.CurrentCultureIgnoreCase))
         {
             mBy = tagSplitArray[1];
         }
-        else if (tagSplitArray[0].Equals(STRING_ID_TAG_OFFSET, StringComparison.CurrentCultureIgnoreCase))
+        else if (tagName.Equals(STRING_ID_TAG_OFFSET, StringComparison.CurrentCultureIgnoreCase))
         {
             Int64 offset = 0;
             if (!Int64.TryParse(tagSplitArray[1], out offset))
                 return false;
 
             mOffset = offset;
+        }
+        else if (tagName.Equals(STRING_ID_TAG_LENGTH, StringComparison.CurrentCultureIgnoreCase))
+        {
+            mLength = tagSplitArray[1];
         }
         else
         {
@@ -260,11 +296,18 @@ public class Lyric  {
         return true;
     }
 
-    protected void UpdateNextTimeStamp()
+    protected void UpdateTimeStamp()
     {
+        // sort the items with timestamp 
+        mItems.Sort();
+
         LyricItem lastItem = null;
         foreach (LyricItem item in mItems)
         {
+            // add the timestamp with global offset
+            item.mTimeStamp += mOffset;
+
+            // update next timestamp
             if (null != lastItem)
             {
                 lastItem.mNextTimeStamp = item.mTimeStamp;
@@ -279,8 +322,10 @@ public class Lyric  {
         info += "title: " + mTitle + System.Environment.NewLine;
         info += "artist: " + mArtist + System.Environment.NewLine;
         info += "album: " + mAlbum + System.Environment.NewLine;
+        info += "author:" + mAuthor + System.Environment.NewLine;
         info += "by: " + mBy + System.Environment.NewLine;
         info += "offset: " + mOffset + System.Environment.NewLine;
+        info += "length: " + mLength + System.Environment.NewLine;
         foreach (LyricItem item in mItems)
         {
             info += TimestampToString(item.mTimeStamp);
