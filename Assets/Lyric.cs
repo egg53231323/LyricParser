@@ -9,6 +9,7 @@ public class LyricItem : IComparable<LyricItem>
     public string mText = "";
     public Int64 mTimeStamp = 0;
     public Int64 mNextTimeStamp = INVALID_TIME_STAMP;
+    public int mIndex = 0;
     public LyricItem() { }
     public LyricItem(string text, Int64 timestamp)
     {
@@ -301,11 +302,13 @@ public class Lyric  {
         // sort the items with timestamp 
         mItems.Sort();
 
+        int index = 0;
         LyricItem lastItem = null;
         foreach (LyricItem item in mItems)
         {
             // add the timestamp with global offset
             item.mTimeStamp += mOffset;
+            item.mIndex = index++;
 
             // update next timestamp
             if (null != lastItem)
@@ -328,6 +331,7 @@ public class Lyric  {
         info += "length: " + mLength + System.Environment.NewLine;
         foreach (LyricItem item in mItems)
         {
+            info += string.Format("[index: {0:D3}] ", item.mIndex);
             info += TimestampToString(item.mTimeStamp);
             info += item.mText;
             info += "     -> " + TimestampToString(item.mNextTimeStamp);
@@ -341,7 +345,7 @@ public class Lyric  {
         if (LyricItem.INVALID_TIME_STAMP == timestamp)
             return "end time stamp";
 
-        return "[" + timestamp / (60 * 1000) + ":" + string.Format("{0:D2}", (timestamp / 1000) % 60) + "." + string.Format("{0:D3}", timestamp % 1000) + "]";
+        return string.Format("[{0:D}:{1:D2}.{2:D3}]", timestamp / (60 * 1000), (timestamp / 1000) % 60, timestamp % 1000);
     }
 
     protected static void LyricLog(string msg)

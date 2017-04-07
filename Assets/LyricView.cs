@@ -11,7 +11,6 @@ public class LyricView : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         string dir = Application.streamingAssetsPath + System.IO.Path.DirectorySeparatorChar;
-        string musicPath = dir + "test.mp3";
         string lyricPath = dir + "test.lrc";
 
         mAudioSource = GameObject.Find("AudioSource").GetComponent<AudioSource>();
@@ -40,13 +39,16 @@ public class LyricView : MonoBehaviour {
         if (null != uiTextLyric)
         {
             List<LyricItem> items = mLyric.GetItems();
+            int showLyricSize = 3;
             foreach (LyricItem item in items)
             {
                 if (item == currentItem)
                 {
                     text += Lyric.WrapStringWithColorTag(item.mText, 255, 0, 0) + System.Environment.NewLine;
                 }
-                else
+                else if ((null == currentItem && item.mIndex < showLyricSize) 
+                    || (null != currentItem && item.mIndex >= currentItem.mIndex - showLyricSize 
+                    && item.mIndex <= currentItem.mIndex + showLyricSize))
                 {
                     text += item.mText + System.Environment.NewLine;
                 }
@@ -77,7 +79,8 @@ public class LyricView : MonoBehaviour {
     public void OnSliderChanged()
     {
         UnityEngine.UI.Slider slider = GameObject.Find("Canvas/Slider").GetComponent<UnityEngine.UI.Slider>();
-        mAudioSource.time = slider.value * mAudioSource.clip.length;
+        float value = Mathf.Clamp(slider.value, 0.0f, 1.0f);
+        mAudioSource.time = value * mAudioSource.clip.length;
         UpdateLyric();
     }
 }
