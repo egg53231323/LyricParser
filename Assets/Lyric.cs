@@ -85,6 +85,7 @@ public class Lyric  {
         mItems.Sort();
 
         LyricLog("Load lyric end");
+
         return true;
     }
 
@@ -234,6 +235,23 @@ public class Lyric  {
 
         timestamp = minute * 60 * 1000 + second * 1000 + millisecond;
         return true;
+    }
+
+    public void PrintInfo()
+    {
+        string info = "";
+        info += "title: " + mTitle + System.Environment.NewLine;
+        info += "artist: " + mArtist + System.Environment.NewLine;
+        info += "album: " + mAlbum + System.Environment.NewLine;
+        info += "by: " + mBy + System.Environment.NewLine;
+        info += "offset: " + mOffset + System.Environment.NewLine;
+        foreach (LyricItem item in mItems)
+        {
+            info += "[" + item.mTimeStamp / (60 * 1000) + ":" + string.Format("{0:D2}", (item.mTimeStamp / 1000) % 60)  + "." + string.Format("{0:D3}", item.mTimeStamp % 1000) + "]";
+            info += item.mText;
+            info += System.Environment.NewLine;
+        }
+        LyricLog(info);
     }
 
     protected void LyricLog(string msg)
