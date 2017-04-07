@@ -10,8 +10,7 @@ public class LyricView : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-        string dir = Application.streamingAssetsPath + System.IO.Path.DirectorySeparatorChar;
-        string lyricPath = dir + "test.lrc";
+        string lyricPath = GetTestLyricPath();
 
         mAudioSource = GameObject.Find("AudioSource").GetComponent<AudioSource>();
         mLyric.Load(lyricPath);
@@ -75,12 +74,49 @@ public class LyricView : MonoBehaviour {
         return (Int64)(mAudioSource.time * 1000.0f);
     }
 
-
     public void OnSliderChanged()
     {
         UnityEngine.UI.Slider slider = GameObject.Find("Canvas/Slider").GetComponent<UnityEngine.UI.Slider>();
         float value = Mathf.Clamp(slider.value, 0.0f, 1.0f);
         mAudioSource.time = value * mAudioSource.clip.length;
         UpdateLyric();
+    }
+
+    protected string GetTestLyricPath()
+    {
+        string fileName = "test.lrc";
+        // download from copy lrc file from streamingAssetsPath for android
+#if (UNITY_ANDROID) && !UNITY_EDITOR
+        string srcPath = Application.streamingAssetsPath + System.IO.Path.AltDirectorySeparatorChar + fileName;
+        string destPath = Application.persistentDataPath + System.IO.Path.AltDirectorySeparatorChar + "lyrics" + System.IO.Path.AltDirectorySeparatorChar + fileName;
+
+        if (System.IO.File.Exists(destPath))
+        {
+            System.IO.File.Delete(destPath);
+        }   
+
+        using (WWW www = new WWW (srcPath))
+        {
+            while (!www.isDone) { }
+
+            if (!string.IsNullOrEmpty(www.error))
+            {
+                Debug.LogWarning (www.error);
+                return String.Empty;
+            }
+                
+            //create Directory
+            String dirPath = System.IO.Path.GetDirectoryName (destPath);
+            if (!System.IO.Directory.Exists (dirPath))
+            {
+                System.IO.Directory.CreateDirectory (dirPath);
+            }
+            System.IO.File.WriteAllBytes (destPath, www.bytes);
+        }
+        return destPath;
+#endif
+
+        string dir = Application.streamingAssetsPath + System.IO.Path.DirectorySeparatorChar;
+        return dir + fileName;
     }
 }
