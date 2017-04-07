@@ -5,8 +5,10 @@ using System;
 
 public class LyricItem : IComparable<LyricItem>
 {
+    public const Int64 INVALID_TIME_STAMP = Int64.MaxValue;
     public string mText = "";
     public Int64 mTimeStamp = 0;
+    public Int64 mNextTimeStamp = INVALID_TIME_STAMP;
     public LyricItem() { }
     public LyricItem(string text, Int64 timestamp)
     {
@@ -49,7 +51,7 @@ public class Lyric  {
     public Int64 mOffset = 0;
 
     // lyric data
-    List<LyricItem> mItems = new List<LyricItem>();
+    protected List<LyricItem> mItems = new List<LyricItem>();
 
     protected static string STRING_ID_TAG_TITLE = "ti";
     protected static string STRING_ID_TAG_ARTIST = "ar";
@@ -59,6 +61,7 @@ public class Lyric  {
 
     public bool Load(string path)
     {
+        mItems.Clear();
         if (null == path)
         {
             LyricLogError("file path is null");
@@ -83,10 +86,30 @@ public class Lyric  {
         }
 
         mItems.Sort();
+        UpdateNextTimeStamp();
 
         LyricLog("Load lyric end");
 
         return true;
+    }
+
+    public LyricItem SearchCurrentItem(Int64 timestamp)
+    {
+        LyricItem item = null;
+        foreach (LyricItem it in mItems)
+        {
+            if (timestamp >= it.mTimeStamp && timestamp < it.mNextTimeStamp)
+            {
+                item = it;
+                break;
+            }
+        }
+        return item;
+    }
+
+    List<LyricItem> GetItems()
+    {
+        return mItems;
     }
 
     protected bool ParseLine(string line)
@@ -96,8 +119,8 @@ public class Lyric  {
 
         LyricLogDebug("current line: " + line);
 
-        const int notFoundIndex = -1;
-        const char openBracket = '[', closeBracket = ']';
+        int notFoundIndex = -1;
+        char openBracket = '[', closeBracket = ']';
 
         int openBracketIndex = 0, closedBracketIndex = 0;
         int startSearchIndex = 0;
@@ -237,6 +260,19 @@ public class Lyric  {
         return true;
     }
 
+    protected void UpdateNextTimeStamp()
+    {
+        LyricItem lastItem = null;
+        foreach (LyricItem item in mItems)
+        {
+            if (null != lastItem)
+            {
+                lastItem.mNextTimeStamp = item.mTimeStamp;
+            }
+            lastItem = item;
+        }
+    }
+
     public void PrintInfo()
     {
         string info = "";
@@ -247,24 +283,33 @@ public class Lyric  {
         info += "offset: " + mOffset + System.Environment.NewLine;
         foreach (LyricItem item in mItems)
         {
-            info += "[" + item.mTimeStamp / (60 * 1000) + ":" + string.Format("{0:D2}", (item.mTimeStamp / 1000) % 60)  + "." + string.Format("{0:D3}", item.mTimeStamp % 1000) + "]";
+            info += TimestampToString(item.mTimeStamp);
             info += item.mText;
+            info += "     -> " + TimestampToString(item.mNextTimeStamp);
             info += System.Environment.NewLine;
         }
         LyricLog(info);
     }
 
-    protected void LyricLog(string msg)
+    public static string TimestampToString(Int64 timestamp)
+    {
+        if (LyricItem.INVALID_TIME_STAMP == timestamp)
+            return "end time stamp";
+
+        return "[" + timestamp / (60 * 1000) + ":" + string.Format("{0:D2}", (timestamp / 1000) % 60) + "." + string.Format("{0:D3}", timestamp % 1000) + "]";
+    }
+
+    protected static void LyricLog(string msg)
     {
         Debug.Log("[Lyric] " + msg);
     }
 
-    protected void LyricLogDebug(string msg)
+    protected static void LyricLogDebug(string msg)
     {
         Debug.Log("[Lyric] " + msg);
     }
 
-    protected void LyricLogError(string msg)
+    protected static void LyricLogError(string msg)
     {
         Debug.LogError("[Lyric] " + msg);
     }
