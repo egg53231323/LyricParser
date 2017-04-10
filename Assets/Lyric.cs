@@ -6,22 +6,31 @@ using System;
 public class LyricItem : IComparable<LyricItem>
 {
     public const Int64 INVALID_TIME_STAMP = Int64.MaxValue;
+
+    // lyric text
     public string mText = "";
-    public Int64 mTimeStamp = 0;
-    public Int64 mNextTimeStamp = INVALID_TIME_STAMP;
+
+    // lyric timestamp in millisecond
+    public Int64 mTimestamp = 0;
+
+    // next lyric timestamp in millisecond
+    public Int64 mNextTimestamp = INVALID_TIME_STAMP;
+
+    // the lyric index when all lyric sorted by timestamp in ascending order
     public int mIndex = 0;
+
     public LyricItem() { }
     public LyricItem(string text, Int64 timestamp)
     {
         mText = text;
-        mTimeStamp = timestamp;
+        mTimestamp = timestamp;
     }
     public int CompareTo(LyricItem other)
     {
-        if (mTimeStamp == other.mTimeStamp)
+        if (mTimestamp == other.mTimestamp)
             return 0;
 
-        if (mTimeStamp < other.mTimeStamp)
+        if (mTimestamp < other.mTimestamp)
             return -1;
 
         return 1;
@@ -65,6 +74,7 @@ public class Lyric  {
     // lyric data
     protected List<LyricItem> mItems = new List<LyricItem>();
 
+    // ID tag key
     protected const string STRING_ID_TAG_TITLE = "ti";
     protected const string STRING_ID_TAG_ARTIST = "ar";
     protected const string STRING_ID_TAG_ALBUM = "al";
@@ -100,19 +110,20 @@ public class Lyric  {
             ParseLine(line);
         }
 
-        UpdateTimeStamp();
+        UpdateTimestamp();
 
         LyricLog("Load lyric end");
 
         return true;
     }
 
+    // search current lyric, timestamp in [item.mTimestamp, item.mNextTimestamp)
     public LyricItem SearchCurrentItem(Int64 timestamp)
     {
         LyricItem item = null;
         foreach (LyricItem it in mItems)
         {
-            if (timestamp >= it.mTimeStamp && timestamp < it.mNextTimeStamp)
+            if (timestamp >= it.mTimestamp && timestamp < it.mNextTimestamp)
             {
                 item = it;
                 break;
@@ -121,11 +132,13 @@ public class Lyric  {
         return item;
     }
 
+    // get all lyric data
     public List<LyricItem> GetItems()
     {
         return mItems;
     }
 
+    // add the RGB info for string
     public static string WrapStringWithColorTag(string str, int R, int G, int B)
     {
         if (null == str)
@@ -297,7 +310,7 @@ public class Lyric  {
         return true;
     }
 
-    protected void UpdateTimeStamp()
+    protected void UpdateTimestamp()
     {
         // sort the items with timestamp 
         mItems.Sort();
@@ -307,13 +320,13 @@ public class Lyric  {
         foreach (LyricItem item in mItems)
         {
             // add the timestamp with global offset
-            item.mTimeStamp += mOffset;
+            item.mTimestamp += mOffset;
             item.mIndex = index++;
 
             // update next timestamp
             if (null != lastItem)
             {
-                lastItem.mNextTimeStamp = item.mTimeStamp;
+                lastItem.mNextTimestamp = item.mTimestamp;
             }
             lastItem = item;
         }
@@ -332,9 +345,9 @@ public class Lyric  {
         foreach (LyricItem item in mItems)
         {
             info += string.Format("[index: {0:D3}] ", item.mIndex);
-            info += TimestampToString(item.mTimeStamp);
+            info += TimestampToString(item.mTimestamp);
             info += item.mText;
-            info += "     -> " + TimestampToString(item.mNextTimeStamp);
+            info += "     -> " + TimestampToString(item.mNextTimestamp);
             info += System.Environment.NewLine;
         }
         LyricLog(info);
